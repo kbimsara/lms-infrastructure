@@ -12,6 +12,13 @@ provider "aws" {
   region = "us-east-1"
 }
 
+# Variables
+variable "db_password" {
+  description = "Password for RDS instance"
+  type        = string
+  sensitive   = true
+}
+
 # VPC and Networking
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
@@ -49,9 +56,9 @@ resource "aws_subnet" "public" {
 }
 
 resource "aws_subnet" "private" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.2.0/24"
-  availability_zone = "us-east-1b"
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.2.0/24"
+  availability_zone       = "us-east-1b"
   map_public_ip_on_launch = true
 }
 
@@ -96,6 +103,19 @@ resource "aws_security_group" "alb" {
   }
 }
 
+resource "aws_security_group" "rds" {
+  name        = "library-rds-sg"
+  description = "Security group for RDS"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.app.id]
+  }
+}
+
 # IAM Role for Lambda
 resource "aws_iam_role" "lambda" {
   name = "lambda_execution_role"
@@ -132,7 +152,7 @@ resource "aws_lb_target_group" "app" {
   }
 }
 
-# EC2 Auto Scaling (Free tier: t2.micro)
+# EC2 Auto Scaling
 resource "aws_launch_template" "app" {
   name_prefix   = "app-template"
   image_id      = "ami-0440d3b780d96b29d"
@@ -157,7 +177,7 @@ resource "aws_autoscaling_group" "app" {
   }
 }
 
-# Application Load Balancer
+# Load Balancer
 resource "aws_lb" "app" {
   name               = "main-alb"
   internal           = false
@@ -180,11 +200,11 @@ resource "aws_cloudwatch_metric_alarm" "cpu_alarm" {
 
 # S3
 resource "aws_s3_bucket" "main" {
-  bucket = "main-storage-bucket-${random_string.suffix.result}"
+  bucket        = "main-storage-bucket-${random_string.suffix.result}"
   force_destroy = true
 }
 
-# Random string for unique S3 bucket name
+# Random string
 resource "random_string" "suffix" {
   length  = 8
   special = false
@@ -193,15 +213,56 @@ resource "random_string" "suffix" {
 
 # Lambda
 resource "aws_lambda_function" "notification" {
-  filename         = "notification.zip"
-  function_name    = "notification-handler"
-  role             = aws_iam_role.lambda.arn
-  handler          = "index.handler"
-  runtime          = "nodejs18.x"
-  memory_size     = 128
+  filename      = "notification.zip"
+  function_name = "notification-handler"
+  role          = aws_iam_role.lambda.arn
+  handler       = "index.handler"
+  runtime       = "nodejs18.x"
+  memory_size   = 128
 }
 
 # SNS
 resource "aws_sns_topic" "notifications" {
   name = "system-notifications"
+}
+
+# RDS Subnet Group
+resource "aws_db_subnet_group" "rds" {
+  name       = "library-db-subnet"
+  subnet_ids = [aws_subnet.private.id, aws_subnet.public.id]
+}
+
+# RDS Instance
+resource "aws_db_instance" "library" {
+  identifier           = "library-db"
+  engine              = "mysql"
+  engine_version      = "8.0"
+  instance_class      = "db.t3.micro"
+  allocated_storage   = 20
+  storage_type        = "gp2"
+  
+  username            = "admin"
+  password            = var.db_password
+  
+  db_subnet_group_name   = aws_db_subnet_group.rds.name
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  
+  skip_final_snapshot  = true
+  publicly_accessible  = false
+  
+  backup_retention_period = 7
+  multi_az               = false
+}
+
+# Outputs
+output "alb_dns_name" {
+  value = aws_lb.app.dns_name
+}
+
+output "rds_endpoint" {
+  value = aws_db_instance.library.endpoint
+}
+
+output "s3_bucket" {
+  value = aws_s3_bucket.main.bucket
 }
