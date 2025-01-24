@@ -8,6 +8,8 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}  # Add this line
+
 
 permissions:
   contents: read
