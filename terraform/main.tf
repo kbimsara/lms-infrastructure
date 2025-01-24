@@ -162,6 +162,10 @@ resource "aws_launch_template" "app" {
     associate_public_ip_address = true
     security_groups            = [aws_security_group.app.id]
   }
+  
+  tags = {
+    Name         = "LMS-App"
+  }
 }
 
 resource "aws_autoscaling_group" "app" {
