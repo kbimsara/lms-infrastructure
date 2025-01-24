@@ -13,6 +13,9 @@ jobs:
   terraform:
     name: 'Terraform'
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform  # Add this section
 
     steps:
     - name: Checkout
