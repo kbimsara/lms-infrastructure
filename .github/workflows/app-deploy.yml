@@ -59,8 +59,9 @@ jobs:
        
    - name: Deploy to S3
      run: |
-       aws s3 cp . s3://${{ secrets.S3_BUCKET }}/app/ --recursive
-       aws autoscaling start-instance-refresh \
-         --auto-scaling-group-name $(aws autoscaling describe-auto-scaling-groups \
-         --query 'AutoScalingGroups[0].AutoScalingGroupName' \
-         --output text)
+      cd app/dist
+      aws s3 sync . s3://${S3_BUCKET}/app/
+      aws autoscaling start-instance-refresh \
+        --auto-scaling-group-name $(aws autoscaling describe-auto-scaling-groups \
+        --query "AutoScalingGroups[0].AutoScalingGroupName" \
+        --output text)
