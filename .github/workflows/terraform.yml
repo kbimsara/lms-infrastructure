@@ -3,16 +3,14 @@ name: 'Terraform'
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'terraform/**'
   pull_request:
     branches: [ "main" ]
 
 env:
   AWS_REGION: us-east-1
-  TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}  # Add this line
-
-permissions:
-  contents: read
-  pull-requests: write
+  TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
 
 jobs:
   terraform:
@@ -20,35 +18,32 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./terraform  # Add this section
+        working-directory: ./terraform
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
+    - uses: actions/checkout@v3
+    
+    - uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v2
+    - uses: hashicorp/setup-terraform@v2
       with:
-        terraform_version: 1.0.0
-
-    - name: Terraform Format
-      run: terraform fmt -write=true main.tf
+        terraform_version: "1.6.0"
 
     - name: Terraform Init
-      run: terraform init
+      run: terraform init -input=false
+
+    - name: Terraform Format
+      run: terraform fmt -check
 
     - name: Terraform Plan
       if: github.event_name == 'pull_request'
-      run: terraform plan -no-color
+      run: terraform plan -no-color -input=false
       continue-on-error: true
-
+      
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: terraform apply -auto-approve
+      run: terraform apply -auto-approve -input=false
