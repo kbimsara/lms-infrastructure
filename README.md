@@ -52,8 +52,15 @@ terraform destroy
 ## Project Structure
 ```
 LMS-infrastructure/
-├── terraform/
-│   ├── main.tf
-│   └── notification.zip
-└── README.md
+├── .github/
+│   └── workflows/
+│       ├── terraform.yml        # Infrastructure deployment
+│       ├── terraform-destroy.yml
+│       └── app-deploy.yml       # Application deployment
+├── app/
+│   ├── src/                    # Frontend code
+│   ├── tests/                  # Test files
+│   └── webpack.config.js
+└── terraform/
+    └── main.tf                 # Infrastructure code
 ```
