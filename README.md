@@ -19,7 +19,7 @@ AWS-based cloud infrastructure for a scalable library management system.
 ## Deployment
 1. Clone repository
 ```bash
-git clone [repository-url]
+git clone https://github.com/kbimsara/lms-infrastructure.git
 cd LMS-infrastructure
 ```
 
